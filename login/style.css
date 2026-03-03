@@ -1,0 +1,100 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    height: 100vh;
+    background: url('https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3') no-repeat center;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 900px;
+    height: 500px;
+    display: flex;
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.15);
+}
+
+.left {
+    flex: 1;
+    color: white;
+    padding: 50px;
+    background: rgba(0,0,0,0.4);
+}
+
+.left h1 {
+    font-size: 48px;
+}
+
+.left p {
+    font-size: 20px;
+    margin-top: 10px;
+}
+
+.right {
+    flex: 1;
+    padding: 40px;
+    background: rgba(255,255,255,0.25);
+}
+
+.right h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: #4a2c2a;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.forgot {
+    display: block;
+    text-align: right;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.or {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.social {
+    display: flex;
+    justify-content: space-between;
+}
+
+.social button {
+    width: 30%;
+    background: white;
+    color: black;
+    font-weight: bold;
+}
+
+.signup {
+    text-align: center;
+    margin-top: 15px;
+}
