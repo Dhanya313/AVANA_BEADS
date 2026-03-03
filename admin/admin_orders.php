@@ -71,23 +71,29 @@ if(isset($_POST['update_status'])){
 }
 
 /* ================= FETCH ORDERS ================= */
+/* ================= FETCH ORDERS ================= */
 
-if(isset($_GET['status']) && $_GET['status'] == 'pending') {
-    $orders = mysqli_query($conn, "
-        SELECT o.*, c.cust_name AS customer_name
-        FROM orders o
-        LEFT JOIN customer c ON o.cust_id=c.cust_id
-        WHERE o.order_status != 'Completed'
-        ORDER BY o.order_date DESC
-    ");
-} else {
-    $orders = mysqli_query($conn, "
-        SELECT o.*, c.cust_name AS customer_name
-        FROM orders o
-        LEFT JOIN customer c ON o.cust_id=c.cust_id
-        ORDER BY o.order_date DESC
-    ");
+$order_filter = isset($_GET['order_filter']) ? $_GET['order_filter'] : '';
+$payment_filter = isset($_GET['payment_filter']) ? $_GET['payment_filter'] : '';
+
+$query = "
+    SELECT o.*, c.cust_name AS customer_name
+    FROM orders o
+    LEFT JOIN customer c ON o.cust_id=c.cust_id
+    WHERE 1
+";
+
+if(!empty($order_filter)){
+    $query .= " AND o.order_status='$order_filter'";
 }
+
+if(!empty($payment_filter)){
+    $query .= " AND o.payment_status='$payment_filter'";
+}
+
+$query .= " ORDER BY o.order_date DESC";
+
+$orders = mysqli_query($conn, $query);
 ?>
 
 <!DOCTYPE html>
@@ -105,7 +111,7 @@ th, td { padding:10px; border-bottom:1px solid #ddd; text-align:left; vertical-a
 th { background:#333; color:white; }
 button { padding:5px 10px; background:orange; color:white; border:none; border-radius:4px; cursor:pointer; }
 select { padding:4px; border-radius:4px; }
-.custom-box { font-size:13px; color:#444; margin-top:4px; }
+.custom-box { font-size:16px;font-weight:500;line-height:1.6; color:#444; margin-top:4px; }
 .custom-img { width:60px; border-radius:6px; margin-top:4px; border:1px solid #ccc; }
 </style>
 </head>
@@ -124,6 +130,30 @@ select { padding:4px; border-radius:4px; }
 
 <div class="main">
     <h2>Orders</h2>
+    <!-- ================= FILTER SECTION ================= -->
+<form method="GET" style="margin-bottom:20px; display:flex; gap:15px; align-items:center;">
+
+    <!-- Order Status Filter -->
+    <select name="order_filter">
+        <option value="">All Order Status</option>
+        <option value="Pending" <?php if(isset($_GET['order_filter']) && $_GET['order_filter']=='Pending') echo 'selected'; ?>>Pending</option>
+        <option value="Processing" <?php if(isset($_GET['order_filter']) && $_GET['order_filter']=='Processing') echo 'selected'; ?>>Processing</option>
+        <option value="Completed" <?php if(isset($_GET['order_filter']) && $_GET['order_filter']=='Completed') echo 'selected'; ?>>Completed</option>
+        <option value="Cancelled" <?php if(isset($_GET['order_filter']) && $_GET['order_filter']=='Cancelled') echo 'selected'; ?>>Cancelled</option>
+    </select>
+
+    <!-- Payment Status Filter -->
+    <select name="payment_filter">
+        <option value="">All Payment Status</option>
+        <option value="Pending" <?php if(isset($_GET['payment_filter']) && $_GET['payment_filter']=='Pending') echo 'selected'; ?>>Pending</option>
+        <option value="Paid" <?php if(isset($_GET['payment_filter']) && $_GET['payment_filter']=='Paid') echo 'selected'; ?>>Paid</option>
+    </select>
+
+    <button type="submit" style="background:#333;">Filter</button>
+    <a href="admin_orders.php" style="text-decoration:none; background:#777; color:white; padding:6px 10px; border-radius:4px;">Reset</a>
+
+</form>
+
     <table>
         <tr>
             <th>Order ID</th>
@@ -133,6 +163,7 @@ select { padding:4px; border-radius:4px; }
             <th>Payment Status</th>
             <th>Order Status</th>
             <th>Items</th>
+            <th>Customizations</th>
             <th>Action</th>
         </tr>
 
@@ -146,6 +177,10 @@ select { padding:4px; border-radius:4px; }
                 <td><?php echo $order['order_status']; ?></td>
                 <td>
                     <ul>
+                        <?php
+                        $custom_data=[];
+                        ?>
+
                     <?php 
                         $items = mysqli_query($conn, "
                             SELECT oi.*, p.product_name 
@@ -155,26 +190,37 @@ select { padding:4px; border-radius:4px; }
                             WHERE oi.order_id=".$order['order_id']
                         );
                         while($item = mysqli_fetch_assoc($items)){
-                            echo "<li>";
-                            echo "<strong>".$item['product_name']."</strong> x ".$item['quantity'];
+    echo "<li>";
+    echo "<strong>".$item['product_name']."</strong> x ".$item['quantity'];
+    echo "</li>";
 
-                            // Show Customization Text
-                            if(!empty($item['customization_text'])){
-                                echo "<div class='custom-box'><b>Customization:</b> ".$item['customization_text']."</div>";
-                            }
+    // Collect Customization Text
+    if(!empty($item['customization_text'])){
+        $custom_data[] = "<div class='custom-box'><b>Text:</b> ".$item['customization_text']."</div>";
+    }
 
-                            // Show Customization Image
-                            if(!empty($item['customization_image'])){
-                                echo "<div class='custom-box'><b>Reference Image:</b><br>
-                                      <img src='../uploads/customization/".$item['customization_image']."' class='custom-img'>
-                                      </div>";
-                            }
-
-                            echo "</li>";
-                        }
+    // Collect Customization Image
+    if(!empty($item['customization_image'])){
+        $custom_data[] = "<div class='custom-box'>
+                            <b>Image:</b><br>
+                            <img src='../uploads/customization/".$item['customization_image']."' class='custom-img'>
+                          </div>";
+    }
+}
                     ?>
                     </ul>
                 </td>
+                <td>
+    <?php
+    if(!empty($custom_data)){
+        foreach($custom_data as $data){
+            echo $data;
+        }
+    } else {
+        echo "-";
+    }
+    ?>
+</td>
                 <td>
                     <form method="POST" style="display:flex; flex-direction:column; gap:5px;">
                         <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
