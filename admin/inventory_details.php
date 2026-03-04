@@ -17,6 +17,7 @@ $categories = $conn->query($catSql);
 // 4️⃣ Count total products
 $totalSql = "SELECT COUNT(*) AS total FROM product p 
              LEFT JOIN inventory i ON p.product_id=i.product_id
+             LEFT JOIN category c ON p.category_id=c.category_id
              WHERE 1 ";
 if($categoryFilter) $totalSql .= " AND p.category_id='$categoryFilter'";
 if($lowStockFilter) $totalSql .= " AND i.stock_quantity < 5";
@@ -25,15 +26,14 @@ $totalRow = $totalResult->fetch_assoc();
 $totalProducts = $totalRow['total'];
 $totalPages = ceil($totalProducts / $limit);
 
-// 5️⃣ Fetch products
-$sql = "SELECT p.*, i.stock_quantity 
+// 5️⃣ Fetch products with category names
+$sql = "SELECT p.*, i.stock_quantity, c.category_name 
         FROM product p
         LEFT JOIN inventory i ON p.product_id=i.product_id
+        LEFT JOIN category c ON p.category_id=c.category_id
         WHERE 1 ";
-
 if($categoryFilter) $sql .= " AND p.category_id='$categoryFilter'";
 if($lowStockFilter) $sql .= " AND i.stock_quantity < 5";
-
 $sql .= " ORDER BY p.product_name ASC 
           LIMIT $limit OFFSET $offset";
 $result = $conn->query($sql);
@@ -45,20 +45,40 @@ $result = $conn->query($sql);
 <meta charset="UTF-8">
 <title>Admin - Inventory</title>
 <style>
-body { font-family: Arial,sans-serif; padding:20px; background:#f9f9f9; }
-h1 { margin-bottom:20px; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; padding:20px; }
+h1 { margin-bottom:20px; color:#333; }
 .filters { margin-bottom:15px; }
-table { width:100%; border-collapse: collapse; background:white; }
-th, td { padding:10px; border:1px solid #ddd; text-align:left; }
-th { background:#f4f4f4; cursor:pointer; }
-.low-stock { background:#fff3cd; } /* Orange for low stock */
-.out-stock { background:#f8d7da; } /* Red for out of stock */
-.sufficient-stock { background:#d4edda; } /* Green for sufficient stock */
-.search-box { margin-bottom:10px; padding:6px; width:50%; }
-button { padding:4px 8px; margin:2px; cursor:pointer; }
-.pagination { margin-top:15px; }
-.pagination a { margin:0 5px; padding:5px 10px; border:1px solid #ccc; text-decoration:none; }
-.pagination a.active { background:#007bff; color:white; border-color:#007bff; }
+.filters select, .filters input[type="checkbox"] { padding:5px 8px; margin-right:10px; }
+.filters button { padding:6px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; }
+.filters button:hover { background:#0056b3; }
+
+table { width:100%; border-collapse: collapse; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden; }
+th, td { padding:12px 10px; border-bottom:1px solid #ddd; text-align:left; font-size:14px; }
+th { background:#007bff; color:white; cursor:default; }
+tr:hover { background:#f1f7ff; }
+
+.low-stock { background:#fff3cd; } /* Orange */
+.out-stock { background:#f8d7da; } /* Red */
+.sufficient-stock { background:#d4edda; } /* Green */
+
+.search-box { margin-bottom:15px; padding:8px; width:50%; border-radius:4px; border:1px solid #ccc; }
+
+.pagination { margin-top:15px; text-align:center; }
+.pagination a { margin:0 5px; padding:6px 12px; border:1px solid #007bff; text-decoration:none; color:#007bff; border-radius:4px; }
+.pagination a.active { background:#007bff; color:white; }
+.pagination a:hover { background:#0056b3; color:white; }
+
+.export-buttons { margin-bottom:10px; }
+.export-buttons button { padding:6px 12px; margin-right:5px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; }
+.export-buttons button:hover { background:#1e7e34; }
+
+.status-badge { padding:4px 8px; border-radius:4px; font-weight:bold; color:white; display:inline-block; font-size:12px; }
+.status-sufficient { background:#28a745; }
+.status-low { background:#ffc107; color:#212529; }
+.status-out { background:#dc3545; }
+
+.action-links a { margin-right:5px; color:#007bff; text-decoration:none; }
+.action-links a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -110,28 +130,28 @@ button { padding:4px 8px; margin:2px; cursor:pointer; }
     <?php if($result->num_rows > 0): ?>
         <?php while($row = $result->fetch_assoc()): ?>
             <?php
+                $stockQty = $row['stock_quantity'] ?? 0;
                 $stockClass = 'sufficient-stock';
-                if($row['stock_quantity'] === null) $row['stock_quantity'] = 0;
-                if($row['stock_quantity'] < 5 && $row['stock_quantity'] > 0) $stockClass = 'low-stock';
-                if($row['stock_quantity'] <= 0) $stockClass = 'out-stock';
+                $statusBadge = '<span class="status-badge status-sufficient">Sufficient</span>';
+
+                if($stockQty <= 0){
+                    $stockClass = 'out-stock';
+                    $statusBadge = '<span class="status-badge status-out">Out of Stock</span>';
+                } elseif($stockQty < 5){
+                    $stockClass = 'low-stock';
+                    $statusBadge = '<span class="status-badge status-low">Low Stock</span>';
+                }
             ?>
             <tr class="<?php echo $stockClass; ?>">
                 <td><?php echo $row['product_id']; ?></td>
                 <td><?php echo htmlspecialchars($row['product_code']); ?></td>
                 <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                <td><?php echo $row['category_id']; ?></td>
+                <td><?php echo htmlspecialchars($row['category_name']); ?></td>
                 <td>₹<?php echo number_format($row['price'],2); ?></td>
-                <td>
-                    <?php echo $row['stock_quantity']; ?>
-                    <form method="POST" action="update_stock.php" style="display:inline;">
-                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                        <button type="submit" name="adjust_stock" value="increase">+</button>
-                        <button type="submit" name="adjust_stock" value="decrease">-</button>
-                    </form>
-                </td>
-                <td><?php echo isset($row['is_active']) && $row['is_active'] ? 'Active' : 'Inactive'; ?></td>
-                <td>
-                    <a href="admin_edit_products.php?id=<?php echo $row['product_id']; ?>">Edit</a> |
+                <td><?php echo $stockQty; ?></td>
+                <td><?php echo $statusBadge; ?></td>
+                <td class="action-links">
+                    <a href="admin_edit_products.php?id=<?php echo $row['product_id']; ?>">Edit</a>
                     <a href="admin_delete_product.php?id=<?php echo $row['product_id']; ?>" onclick="return confirm('Are you sure?')">Delete</a>
                 </td>
             </tr>
