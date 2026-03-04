@@ -131,8 +131,7 @@ function toggleCategory(){
     Product Image:
     <input type="file" name="image" required>
 
-    <label>
-    <input type="checkbox" name="is_new" value="1">Mark as NEW Product</label>
+    
 
     Price:
     <input type="number" step="0.01" name="price" required>

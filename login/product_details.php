@@ -46,10 +46,12 @@ if(!$product){
 }
 
 .product-image{
-    width: 100%;
-    height: 400px;
-    object-fit: cover;
+    width: 80%;
+    max-width: 500px;
+    height: auto;
     border-radius: 10px;
+    display: block;
+    margin: 0 auto;
 }
 
 .product-info{
@@ -102,7 +104,7 @@ input[type="file"]{
     <!-- LEFT SIDE -->
     <div class="left-section">
 
-        <img src="../images/<?php echo $product['image']; ?>" class="product-image">
+        <img src="../uploads/<?php echo $product['image']; ?>" class="product-image">
 
         <div class="product-info">
             <h2><?php echo $product['product_name']; ?></h2>

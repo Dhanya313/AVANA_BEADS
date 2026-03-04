@@ -84,6 +84,22 @@ if(isset($_SESSION['cust_id'])){
     background: rgba(255,255,255,0.1);
 }
 
+.logout-link {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.logout-link:hover {
+    background: rgba(255,255,255,0.1);
+}
 
 </style>
 <script>
@@ -116,7 +132,15 @@ document.addEventListener("DOMContentLoaded", function() {
         <div class="account-content">
             <a href="profile.php">Profile</a>
             <a href="my_orders.php">Orders</a>
-            <a href="logout.php">Logout</a>
+
+            <!-- Secure Logout -->
+            <form action="log_out_cust.php" method="POST" style="margin:0;">
+                <button type="submit" class="logout-link"
+                    onclick="return confirm('Are you sure you want to logout?');">
+                    Logout
+                </button>
+            </form>
+
         </div>
     </div>
 </div>
